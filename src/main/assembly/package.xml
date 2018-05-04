@@ -21,7 +21,7 @@
     </fileSet>
 
     <fileSet>
-      <directory>../agate-web-model/target/generated-sources/protobuf-python/</directory>
+      <directory>target/agate-web-model-python/</directory>
       <outputDirectory>agate-python/bin/agate/protobuf</outputDirectory>
       <includes>
         <include>**/*.*</include>
