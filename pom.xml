@@ -20,7 +20,6 @@
   <packaging>pom</packaging>
 
   <properties>
-    <obiba.deploy.dir>unstable</obiba.deploy.dir>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     <java.version>1.8</java.version>
@@ -204,7 +203,7 @@
                     <filter token="project.name" value="${project.name}" />
                     <filter token="project.version" value="${project.version}" />
                     <filter token="project.description" value="${project.description}" />
-                    <filter token="project.download.url" value="http://download.obiba.org/agate/${obiba.deploy.dir}/${python.package.name}" />
+                    <filter token="project.download.url" value="https://github.com/obiba/${project.name}/releases/download/${project.version}/${python.package.name}" />
                   </filterset>
                 </copy>
                 <exec dir="${python.dist.path}/agate-python" executable="python" failonerror="true">
