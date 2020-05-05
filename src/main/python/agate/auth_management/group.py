@@ -28,6 +28,9 @@ def do_add_command(args):
         request = agate.core.AgateClient.build(agate.core.AgateClient.LoginInfo.parse(args)).new_request()
         request.fail_on_error()
 
+        if args.verbose:
+            request.verbose()
+
         group = {'name': args.name}
         if args.description:
             group['description'] = args.description

@@ -14,9 +14,11 @@ def user_add_arguments(parser):
 
     parser.add_argument('--name', help='The User Name (required), it must be unique', required=True)
     parser.add_argument('--email', help='The Email (required), it must be unique', required=True)
-    parser.add_argument('--upassword', help='The user Password (required)', required=True)
+    parser.add_argument('--upassword', help='The user Password (required if realm is "agate-user-realm")', required=False)
     parser.add_argument('--first-name', help='The user First Name', required=False)
     parser.add_argument('--last-name', help='The user Last Name', required=False)
+    parser.add_argument('--realm', help='Realm in which the user will authenticate (default is: "agate-user-realm")',
+                        required=False, default='agate-user-realm')
     parser.add_argument('--applications', help='Applications in which the user can sign in, e.g. "opal mica drupal"',
                         required=False, nargs='*')
     parser.add_argument('--groups',
@@ -39,8 +41,11 @@ def do_add_command(args):
         request = agate.core.AgateClient.build(agate.core.AgateClient.LoginInfo.parse(args)).new_request()
         request.fail_on_error()
 
+        if args.verbose:
+            request.verbose()
+
         user = {'name': args.name, 'email': args.email, 'role': args.role, 'status': args.status,
-                'realm': 'agate-user-realm'}
+                'realm': args.realm}
         if args.first_name:
             user['firstName'] = args.first_name
         if args.last_name:
@@ -50,7 +55,12 @@ def do_add_command(args):
         if args.groups:
             user['groups'] = args.groups
 
-        data = {'password': args.upassword, 'user': user}
+        if not args.upassword and args.realm == 'agate-user-realm':
+            raise Exception("User password is required for Agate's realm.")
+
+        data = {'user': user}
+        if args.realm == 'agate-user-realm':
+            data = {'password': args.upassword, 'user': user}
 
         request.post().content_type_json().resource(agate.core.UriBuilder(['users']).build()).content(json.dumps(data))
 
