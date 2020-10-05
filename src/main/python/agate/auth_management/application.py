@@ -41,13 +41,13 @@ def do_add_command(args):
             json.dumps(application))
 
         response = request.send()
-        print response.content
-    except Exception, e:
-        print e
+        print(response.content)
+    except Exception as e:
+        print(e)
         sys.exit(2)
-    except pycurl.error, error:
+    except pycurl.error as error:
         errno, errstr = error
-        print >> sys.stderr, 'An error occurred: ', errstr
+        print('An error occurred: ', errstr, file=sys.stderr)
         sys.exit(2)
 
 
@@ -71,11 +71,11 @@ def do_delete_command(args):
         request.delete().content_type_json().resource(agate.core.UriBuilder(['application', args.name]).build())
 
         response = request.send()
-        print response.content
-    except Exception, e:
-        print e
+        print(response.content)
+    except Exception as e:
+        print(e)
         sys.exit(2)
-    except pycurl.error, error:
+    except pycurl.error as error:
         errno, errstr = error
-        print >> sys.stderr, 'An error occurred: ', errstr
+        print('An error occurred: ', errstr, file=sys.stderr)
         sys.exit(2)

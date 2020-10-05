@@ -19,13 +19,5 @@
       <outputDirectory>agate-python/bin</outputDirectory>
       <filtered>true</filtered>
     </fileSet>
-
-    <fileSet>
-      <directory>target/agate-web-model-python/</directory>
-      <outputDirectory>agate-python/bin/agate/protobuf</outputDirectory>
-      <includes>
-        <include>**/*.*</include>
-      </includes>
-    </fileSet>
   </fileSets>
 </assembly>

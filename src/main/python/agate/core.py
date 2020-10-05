@@ -8,10 +8,11 @@ import sys
 import pycurl
 import base64
 import json
-import cStringIO
+import io
 import os.path
 import getpass
-import urllib
+import urllib.request, urllib.parse, urllib.error
+from functools import reduce
 
 
 class AgateClient:
@@ -58,14 +59,14 @@ class AgateClient:
             if pwd:
                 e = getpass.getpass(prompt=text + ': ')
             else:
-                print text + ': ',
+                print(text + ': ', end=' ')
                 e = sys.stdin.readline().rstrip().strip()
         return e
 
     def credentials(self, user, password):
         u = self.__ensure_entry('User name', user)
         p = self.__ensure_entry('Password', password, True)
-        return self.header('Authorization', 'Basic ' + base64.b64encode(u + ':' + p))
+        return self.header('Authorization', 'Basic ' + base64.b64encode((u + ':' + p).encode("utf-8")).decode("utf-8"))
 
     def keys(self, cert_file, key_file, key_pwd=None, ca_certs=None):
         self.curl_option(pycurl.SSLCERT, cert_file)
@@ -123,7 +124,7 @@ class AgateClient:
             return cls()
 
         def isSsl(self):
-            if self.data.viewkeys() & {'cert', 'key'}:
+            if self.data.keys() & {'cert', 'key'}:
                 return True
             return False
 
@@ -170,14 +171,8 @@ class AgateRequest:
     def accept_json(self):
         return self.accept('application/json')
 
-    def accept_protobuf(self):
-        return self.accept('application/x-protobuf')
-
     def content_type_json(self):
         return self.content_type('application/json')
-
-    def content_type_protobuf(self):
-        return self.content_type('application/x-protobuf')
 
     def method(self, method):
         if not method:
@@ -231,18 +226,18 @@ class AgateRequest:
 
     def content(self, content):
         if self._verbose:
-            print '* Content:'
-            print content
+            print('* Content:')
+            print(content)
         self.curl_option(pycurl.POST, 1)
         self.curl_option(pycurl.POSTFIELDSIZE, len(content))
-        reader = cStringIO.StringIO(content)
+        reader = io.StringIO(content)
         self.curl_option(pycurl.READFUNCTION, reader.read)
         return self
 
     def content_file(self, filename):
         if self._verbose:
-            print '* File Content:'
-            print '[file=' + filename + ', size=' + str(os.path.getsize(filename)) + ']'
+            print('* File Content:')
+            print('[file=' + filename + ', size=' + str(os.path.getsize(filename)) + ']')
         self.curl_option(pycurl.POST, 1)
         self.curl_option(pycurl.POSTFIELDSIZE, os.path.getsize(filename))
         reader = open(filename, 'rb')
@@ -251,8 +246,8 @@ class AgateRequest:
 
     def content_upload(self, filename):
         if self._verbose:
-            print '* File Content:'
-            print '[file=' + filename + ', size=' + str(os.path.getsize(filename)) + ']'
+            print('* File Content:')
+            print('[file=' + filename + ', size=' + str(os.path.getsize(filename)) + ']')
             # self.curl_option(pycurl.POST,1)
         self.curl_option(pycurl.HTTPPOST, [("file1", (pycurl.FORM_FILE, filename))])
         return self
@@ -281,7 +276,7 @@ class Storage:
 
     def store(self, buf):
         self.line = self.line + 1
-        self.content = self.content + buf
+        self.content = self.content + buf.decode("utf-8")
 
     def __str__(self):
         return self.contents
@@ -299,7 +294,7 @@ class HeaderStorage(Storage):
 
     def store(self, buf):
         Storage.store(self, buf)
-        header = buf.partition(':')
+        header = buf.decode("utf-8").partition(':')
         if header[1]:
             value = header[2].rstrip().strip()
             if header[0] in self.headers:
@@ -361,14 +356,14 @@ class UriBuilder:
             return p + '/' + s
 
         def concat_params(k):
-            return urllib.quote(k) + '=' + urllib.quote(str(self.params[k]))
+            return urllib.parse.quote(k) + '=' + urllib.parse.quote(str(self.params[k]))
 
         def concat_query(q, p):
             return q + '&' + p
 
-        p = urllib.quote('/' + reduce(concat_segment, self.path))
+        p = urllib.parse.quote('/' + reduce(concat_segment, self.path))
         if len(self.params):
-            q = reduce(concat_query, map(concat_params, self.params.keys()))
+            q = reduce(concat_query, list(map(concat_params, list(self.params.keys()))))
             return p + '?' + q
         else:
             return p

@@ -21,10 +21,10 @@ DESCRIPTION_LOG = """Data publishing Web application for biobanks by OBiBa. Agat
     collected from any data source, must be integrated and stored in a central
     data repository under a uniform model.
 """
-PACKAGES = ['agate', 'agate.protobuf']
+PACKAGES = ['agate']
 PACKAGES_DIR = {'agate': 'bin/agate'}
 SCRIPTS = ['bin/scripts/agate']
-INSTALL_REQUIRES = ['protobuf >= 2.4', 'pycurl']
+INSTALL_REQUIRES = ['pycurl']
 
 setup(
     name=PACKAGE_NAME,
