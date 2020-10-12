@@ -1,20 +1,21 @@
 #!/bin/sh
 set -e
 
-# clean python2 install (agate symlink)
-python2_lib=/usr/lib/python2.7/dist-packages
+# link agate folder to default python lib, /usr/share/pyshared may not be icluded in the lib path
+python_lib=$(python3 -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())")
 
 case "$1" in
   0)
-    if [ -d $python2_lib ]; then
-      rm -f $python2_lib/agate
+    if [ -d $python_lib ]; then
+      rm -rf $python_lib/agate
     fi
   ;;
 
   [1-2])
-    if [ -d $python2_lib ]; then
-      rm -f $python2_lib/agate
+    if [ -d $python_lib ]; then
+      rm -rf $python_lib/agate
     fi
+    ln -s /usr/share/pyshared/agate $python_lib/agate
   ;;
 
   *)
