@@ -61,4 +61,8 @@ add_subcommand('delete-application',
 
 # Execute selected command
 args = parser.parse_args()
-args.func(args)
+if hasattr(args, 'func'):
+  args.func(args)
+else:
+  print('Agate command line tool.')
+  print('For more details: agate --help')
