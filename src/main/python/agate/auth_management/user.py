@@ -19,7 +19,7 @@ def user_add_arguments(parser):
     parser.add_argument('--last-name', help='The user Last Name', required=False)
     parser.add_argument('--realm', help='Realm in which the user will authenticate (default is: "agate-user-realm")',
                         required=False, default='agate-user-realm')
-    parser.add_argument('--applications', help='Applications in which the user can sign in, e.g. "opal mica drupal"',
+    parser.add_argument('--applications', help='Applications in which the user can sign in, e.g. "opal mica"',
                         required=False, nargs='*')
     parser.add_argument('--groups',
                         help='Members of a group get access to the applications associated to this group, e.g. \

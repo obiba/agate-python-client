@@ -17,6 +17,7 @@ def application_add_arguments(parser):
     parser.add_argument('--key', help='The application Key (required)', required=True)
     parser.add_argument('--redirect', help='Callback URL to the application\'s server, required in the OAuth context',
                         required=False)
+    parser.add_argument('--manual-approval', help='User signing up through the application is in "pending for approval" state', required=False)
 
 
 def do_add_command(args):
@@ -34,8 +35,10 @@ def do_add_command(args):
         application = {'name': args.name, 'key': args.key}
         if args.description:
             application['description'] = args.description
-        if args.applications:
+        if args.redirect:
             application['redirectURI'] = args.redirect
+        if args.manual_approval:
+            application['autoApproval'] = False
 
         request.post().content_type_json().resource(agate.core.UriBuilder(['applications']).build()).content(
             json.dumps(application))
