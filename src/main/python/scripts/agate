@@ -16,6 +16,7 @@ def add_agate_arguments(parser):
                         help='Agate server base url (default: http://localhost:8081)')
     parser.add_argument('--user', '-u', required=False, help='User name')
     parser.add_argument('--password', '-p', required=False, help='User password')
+    parser.add_argument('--otp', '-ot', action='store_true', help='Whether a one-time password is to be provided (required when connecting with username/password AND two-factor authentication is enabled)')
     parser.add_argument('--ssl-cert', '-sc', required=False, help='Certificate (public key) file')
     parser.add_argument('--ssl-key', '-sk', required=False, help='Private key file')
     parser.add_argument('--verbose', '-v', action='store_true', help='Verbose output')

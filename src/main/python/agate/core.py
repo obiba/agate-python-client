@@ -27,30 +27,17 @@ class AgateClient:
 
     @classmethod
     def build(cls, loginInfo):
-        if loginInfo.isSsl():
-            return AgateClient.buildWithCertificate(loginInfo.data['server'], loginInfo.data['cert'],
-                                                   loginInfo.data['key'])
-        else:
-            return AgateClient.buildWithAuthentication(loginInfo.data['server'], loginInfo.data['user'],
-                                                      loginInfo.data['password'])
+        return AgateClient.buildWithAuthentication(loginInfo.data['server'], loginInfo.data['user'],
+                                                   loginInfo.data['password'], loginInfo.data['otp'])
         raise Exception('Failed to build Agate Client')
 
     @classmethod
-    def buildWithCertificate(cls, server, cert, key):
+    def buildWithAuthentication(cls, server, user, password, otp):
         client = cls(server)
         if client.base_url.startswith('https:'):
             client.verify_peer(0)
             client.verify_host(0)
-        client.keys(cert, key)
-        return client
-
-    @classmethod
-    def buildWithAuthentication(cls, server, user, password):
-        client = cls(server)
-        if client.base_url.startswith('https:'):
-            client.verify_peer(0)
-            client.verify_host(0)
-        client.credentials(user, password)
+        client.credentials(user, password, otp)
         return client
 
     def __ensure_entry(self, text, entry, pwd=False):
@@ -62,9 +49,12 @@ class AgateClient:
                 e = input(text + ': ')
         return e
 
-    def credentials(self, user, password):
+    def credentials(self, user, password, otp):
         u = self.__ensure_entry('User name', user)
         p = self.__ensure_entry('Password', password, True)
+        if otp:
+            val = input("Enter 6-digits code: ")
+            self.header('X-Obiba-TOTP', val)
         return self.header('Authorization', 'Basic ' + base64.b64encode((u + ':' + p).encode("utf-8")).decode("utf-8"))
 
     def keys(self, cert_file, key_file, key_pwd=None, ca_certs=None):
@@ -113,6 +103,7 @@ class AgateClient:
             if argv.get('user') and argv.get('password'):
                 data['user'] = argv['user']
                 data['password'] = argv['password']
+                data['otp'] = argv['otp']
             elif argv.get('ssl_cert') and argv.get('ssl_key'):
                 data['cert'] = argv['ssl_cert']
                 data['key'] = argv['ssl_key']
