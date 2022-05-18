@@ -29,7 +29,6 @@ class AgateClient:
     def build(cls, loginInfo):
         return AgateClient.buildWithAuthentication(loginInfo.data['server'], loginInfo.data['user'],
                                                    loginInfo.data['password'], loginInfo.data['otp'])
-        raise Exception('Failed to build Agate Client')
 
     @classmethod
     def buildWithAuthentication(cls, server, user, password, otp):
