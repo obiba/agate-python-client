@@ -4,11 +4,9 @@ See also http://www.angryobjects.com/2011/10/15/http-with-python-pycurl-by-examp
 Curl options http://curl.haxx.se/libcurl/c/curl_easy_setopt.html
 """
 
-import sys
 import pycurl
 import base64
 import json
-import io
 import os.path
 import getpass
 import urllib.request, urllib.parse, urllib.error
@@ -31,7 +29,7 @@ class AgateClient:
                                                    loginInfo.data['password'], loginInfo.data['otp'])
 
     @classmethod
-    def buildWithAuthentication(cls, server, user, password, otp):
+    def buildWithAuthentication(cls, server, user, password, otp=None):
         client = cls(server)
         if client.base_url.startswith('https:'):
             client.verify_peer(0)
