@@ -373,7 +373,7 @@
     <connection>scm:git:https://github.com/obiba/agate-python-client.git</connection>
     <developerConnection>scm:git:https://github.com/obiba/agate-python-client.git</developerConnection>
     <url>https://github.com/obiba/agate-python-client</url>
-    <tag>HEAD</tag>
+    <tag>agate-python-client-2.2.x</tag>
   </scm>
 
   <issueManagement>
