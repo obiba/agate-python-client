@@ -1,4 +1,4 @@
-# Agate Python [![Build Status](https://travis-ci.org/obiba/agate-python-client.svg?branch=master)](https://travis-ci.org/obiba/agate-python-client)
+# Agate Python [![Build Status](https://app.travis-ci.com/obiba/agate-python-client.svg?branch=master)](https://app.travis-ci.com/github/obiba/agate-python-client)
 
 This Python-based command line tool allows to access to a Agate server through its REST API. This is the perfect tool
 for automating tasks in Agate. This will be the preferred client developed when new features are added to the REST API.
@@ -8,6 +8,12 @@ for automating tasks in Agate. This will be the preferred client developed when 
 * Continuous integration is on [Travis](https://travis-ci.org/obiba/agate-python-client).
 
 ## Usage
+
+Install with:
+
+```
+pip install obiba-agate
+```
 
 To get the options of the command line:
 
