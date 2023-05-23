@@ -9,6 +9,8 @@ import obiba_agate.auth_management.application as application
 import obiba_agate.auth_management.group as group
 import obiba_agate.auth_management.user as user
 
+def prompt_password():
+    return input('Enter password:')
 
 def add_agate_arguments(parser):
     """
@@ -17,7 +19,7 @@ def add_agate_arguments(parser):
     parser.add_argument('--agate', '-ag', required=False, default='http://localhost:8081',
                         help='Agate server base url (default: http://localhost:8081)')
     parser.add_argument('--user', '-u', required=False, help='User name')
-    parser.add_argument('--password', '-p', required=False, help='User password')
+    parser.add_argument('--password', '-p', nargs="?", required=False, help='User password')
     parser.add_argument('--otp', '-ot', action='store_true', help='Whether a one-time password is to be provided (required when connecting with username/password AND two-factor authentication is enabled)')
     parser.add_argument('--ssl-cert', '-sc', required=False, help='Certificate (public key) file')
     parser.add_argument('--ssl-key', '-sk', required=False, help='Private key file')
@@ -68,6 +70,10 @@ def run():
 
     # Execute selected command
     args = parser.parse_args()
+
+    if not args.password or len(args.password) == 0:
+        args.password = prompt_password()
+
     if hasattr(args, 'func'):
         try:
             args.func(args)
