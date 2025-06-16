@@ -24,6 +24,7 @@ def add_agate_arguments(parser):
     parser.add_argument('--ssl-cert', '-sc', required=False, help='Certificate (public key) file')
     parser.add_argument('--ssl-key', '-sk', required=False, help='Private key file')
     parser.add_argument('--verbose', '-v', action='store_true', help='Verbose output')
+    parser.add_argument('--no-ssl-verify', '-nv', action='store_true', help='Do not verify SSL certificates for HTTPS.')
 
 
 def add_subcommand(subparsers, name, help, add_args_func, default_func):

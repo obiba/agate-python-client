@@ -33,14 +33,13 @@ class AgateClientTestSSLConnection(unittest.TestCase):
             self.fail(e)
 
     def test_sendSecuredRest(self):
-        if exists(self.SSL_CERTIFICATE):
-            try:
-                client = AgateClient.buildWithCertificate(server=self.SERVER,
-                                                        cert=self.SSL_CERTIFICATE,
-                                                        key=self.SSL_KEY)
-                self.__sendSimpleRequest(client.new_request())
-            except Exception as e:
-                self.fail(e)
+        try:
+            client = AgateClient.buildWithAuthentication(server='https://localhost:8444',
+                                                    user='administrator',
+                                                    password='password', no_ssl_verify=True)
+            self.__sendSimpleRequest(client.new_request())
+        except Exception as e:
+            self.fail(e)
 
     def test_validAuthLoginInfo(self):
         try:

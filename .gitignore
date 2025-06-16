@@ -28,3 +28,6 @@ coverage
 *.sw?
 
 __pycache__
+
+debug.py
+.history

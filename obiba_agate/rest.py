@@ -24,32 +24,37 @@ def do_command(args):
     Execute REST command
     """
     # Build and send request
-    request = core.AgateClient.build(core.AgateClient.LoginInfo.parse(args)).new_request()
-    request.fail_on_error()
+    client = core.AgateClient.build(core.AgateClient.LoginInfo.parse(args))
 
-    if args.accept:
-        request.accept(args.accept)
-    else:
-        request.accept_json()
+    try:
+        request = client.new_request()
+        request.fail_on_error()
 
-    if args.content_type:
-        request.content_type(args.content_type)
-        print('Enter content:')
-        request.content(sys.stdin.read())
+        if args.accept:
+            request.accept(args.accept)
+        else:
+            request.accept_json()
 
-    if args.verbose:
-        request.verbose()
+        if args.content_type:
+            request.content_type(args.content_type)
+            print('Enter content:')
+            request.content(sys.stdin.read())
 
-    # send request
-    request.method(args.method).resource(args.ws)
-    response = request.send()
+        if args.verbose:
+            request.verbose()
 
-    # format response
-    res = response.content
-    if args.json:
-        res = response.pretty_json()
-    elif args.method in ['OPTIONS']:
-        res = response.headers['Allow']
+        # send request
+        request.method(args.method).resource(args.ws)
+        response = request.send()
 
-    # output to stdout
-    print(res)
+        # format response
+        res = response.content
+        if args.json:
+            res = response.pretty_json()
+        elif args.method in ['OPTIONS']:
+            res = response.headers['Allow']
+
+        # output to stdout
+        print(res)
+    finally:
+        client.close()
