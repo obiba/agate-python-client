@@ -1,7 +1,5 @@
 """
-Based on PyCurl http://pycurl.sourceforge.net/
-See also http://www.angryobjects.com/2011/10/15/http-with-python-pycurl-by-example/
-Curl options http://curl.haxx.se/libcurl/c/curl_easy_setopt.html
+Based on Python Request library https://docs.python-requests.org/en/latest/index.html
 """
 
 import base64
@@ -12,8 +10,7 @@ from requests import Session, Request
 import urllib3
 from http.client import HTTPConnection
 from http import HTTPStatus
-
-import urllib.request, urllib.parse, urllib.error
+import urllib.parse
 from functools import reduce
 
 
@@ -64,16 +61,6 @@ class AgateClient:
             self.header('X-Obiba-TOTP', val)
 
         self.session.headers.update({"Authorization": "Basic %s" % base64.b64encode(("%s:%s" % (u, p)).encode("utf-8")).decode("utf-8")})
-
-    def keys(self, cert_file, key_file, key_pwd=None, ca_certs=None):
-        self.curl_option(pycurl.SSLCERT, cert_file)
-        self.curl_option(pycurl.SSLKEY, key_file)
-        if key_pwd:
-            self.curl_option(pycurl.KEYPASSWD, key_pwd)
-        if ca_certs:
-            self.curl_option(pycurl.CAINFO, ca_certs)
-        self.headers.pop('Authorization', None)
-        return self
 
     def verify(self, value):
         """
