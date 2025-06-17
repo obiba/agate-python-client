@@ -184,7 +184,7 @@ class AgateRequest:
         return self
 
     def content_type(self, value):
-        return self.headers.update({"Content-Type": value})
+        return self.header('Content-Type', value)
 
     def accept_json(self):
         return self.accept('application/json')
@@ -291,7 +291,8 @@ class AgateRequest:
         if self._verbose:
             print("* File Content:")
             print("[file=" + filename + ", size=" + str(os.path.getsize(filename)) + "]")
-        self.files = {"file": (filename, open(filename, "rb"))}
+        with open(filename, "rb") as file:
+            self.files = {"file": (filename, file.read())}
         return self
 
     def send(self):
@@ -377,8 +378,13 @@ class AgateResponse:
         agateVersion = self.version
         if agateVersion is not None:
             info = {}
-            [info["major"], info["minor"], info["patch"]] = self.version.split(".")
-            return info
+            version_parts = self.version.split(".")
+            if len(version_parts) == 3:
+                info["major"], info["minor"], info["patch"] = version_parts
+                return info
+            else:
+                # Handle malformed version string
+                return None
         return None
 
     def as_json(self):
