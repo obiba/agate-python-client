@@ -137,6 +137,7 @@ class AgateRequest:
         self.client = agate_client
         self.options = {}
         self.headers = {'Accept': 'application/json'}
+        self._verbose = False
         self.params = {}
         self._fail_on_error = False
         self.files = None
@@ -183,13 +184,14 @@ class AgateRequest:
         return self
 
     def content_type(self, value):
-        return self.accept("application/json")
+        return self.headers.update({"Content-Type": value})
 
     def accept_json(self):
         return self.accept('application/json')
 
     def content_type_json(self):
-        return self.content_type('application/json')
+        self.content_type('application/json')
+        return self
 
     def method(self, method):
         """
