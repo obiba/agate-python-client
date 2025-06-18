@@ -1,15 +1,16 @@
 """
-Based on PyCurl http://pycurl.sourceforge.net/
-See also http://www.angryobjects.com/2011/10/15/http-with-python-pycurl-by-example/
-Curl options http://curl.haxx.se/libcurl/c/curl_easy_setopt.html
+Based on Python Request library https://docs.python-requests.org/en/latest/index.html
 """
 
-import pycurl
 import base64
 import json
 import os.path
 import getpass
-import urllib.request, urllib.parse, urllib.error
+from requests import Session, Request
+import urllib3
+from http.client import HTTPConnection
+from http import HTTPStatus
+import urllib.parse
 from functools import reduce
 
 
@@ -19,21 +20,27 @@ class AgateClient:
     """
 
     def __init__(self, server=None):
-        self.curl_options = {}
+        self.session = Session()
         self.headers = {}
         self.base_url = self.__ensure_entry('Agate address', server)
+
+    def __del__(self):
+        self.close()
 
     @classmethod
     def build(cls, loginInfo):
         return AgateClient.buildWithAuthentication(loginInfo.data['server'], loginInfo.data['user'],
-                                                   loginInfo.data['password'], loginInfo.data['otp'])
+                                                   loginInfo.data['password'], loginInfo.data['otp'],
+                                                   loginInfo.data["no_ssl_verify"])
 
     @classmethod
-    def buildWithAuthentication(cls, server, user, password, otp=None):
+    def buildWithAuthentication(cls, server, user, password, otp=None, no_ssl_verify: bool = False):
         client = cls(server)
         if client.base_url.startswith('https:'):
-            client.verify_peer(0)
-            client.verify_host(0)
+            client.session.verify = not no_ssl_verify
+            if no_ssl_verify:
+                urllib3.disable_warnings()
+
         client.credentials(user, password, otp)
         return client
 
@@ -52,37 +59,43 @@ class AgateClient:
         if otp:
             val = input("Enter 6-digits code: ")
             self.header('X-Obiba-TOTP', val)
-        return self.header('Authorization', 'Basic ' + base64.b64encode((u + ':' + p).encode("utf-8")).decode("utf-8"))
 
-    def keys(self, cert_file, key_file, key_pwd=None, ca_certs=None):
-        self.curl_option(pycurl.SSLCERT, cert_file)
-        self.curl_option(pycurl.SSLKEY, key_file)
-        if key_pwd:
-            self.curl_option(pycurl.KEYPASSWD, key_pwd)
-        if ca_certs:
-            self.curl_option(pycurl.CAINFO, ca_certs)
-        self.headers.pop('Authorization', None)
-        return self
+        self.session.headers.update({"Authorization": "Basic %s" % base64.b64encode(("%s:%s" % (u, p)).encode("utf-8")).decode("utf-8")})
 
-    def verify_peer(self, verify):
-        return self.curl_option(pycurl.SSL_VERIFYPEER, verify)
+    def verify(self, value):
+        """
+        Ignore or validate certificate
 
-    def verify_host(self, verify):
-        return self.curl_option(pycurl.SSL_VERIFYHOST, verify)
-
-    def ssl_version(self, version):
-        return self.curl_option(pycurl.SSLVERSION, version)
-
-    def curl_option(self, opt, value):
-        self.curl_options[opt] = value
+        :param value = True/False to validation or not. Value can also be a CA_BUNDLE file or directory (e.g. 'verify=/etc/ssl/certs/ca-certificates.crt')
+        """
+        self.session.verify = value
         return self
 
     def header(self, key, value):
-        self.headers[key] = value
+        """
+        Adds a header to session headers used by the request
+
+        :param key - header key
+        :param value - header value
+        """
+        header = {}
+        header[key] = value
+
+        self.session.headers.update(header)
         return self
 
     def new_request(self):
         return AgateRequest(self)
+
+    def close(self):
+        """
+        Closes client session and request to close Agate server session
+        """
+        try:
+            self.new_request().resource("/auth/session/_current").delete().send()
+            self.session.close()
+        except Exception as e:
+            pass
 
     class LoginInfo:
         data = None
@@ -92,18 +105,17 @@ class AgateClient:
             data = {}
             argv = vars(args)
 
+            data["no_ssl_verify"] = argv.get("no_ssl_verify")
+
             if argv.get('agate'):
                 data['server'] = argv['agate']
             else:
                 raise Exception('Agate server information is missing.')
 
             if argv.get('user') and argv.get('password'):
-                data['user'] = argv['user']
-                data['password'] = argv['password']
-                data['otp'] = argv['otp']
-            elif argv.get('ssl_cert') and argv.get('ssl_key'):
-                data['cert'] = argv['ssl_cert']
-                data['key'] = argv['ssl_key']
+                data["user"] = argv["user"]
+                data["password"] = argv["password"]
+                data["otp"] = argv["otp"]
             else:
                 raise Exception('Invalid login information. Requires user-password or certificate-key information')
 
@@ -123,34 +135,53 @@ class AgateRequest:
 
     def __init__(self, agate_client):
         self.client = agate_client
-        self.curl_options = {}
+        self.options = {}
         self.headers = {'Accept': 'application/json'}
         self._verbose = False
+        self.params = {}
+        self._fail_on_error = False
+        self.files = None
+        self.data = None
 
-    def curl_option(self, opt, value):
-        self.curl_options[opt] = value
-        return self
 
     def timeout(self, value):
-        return self.curl_option(pycurl.TIMEOUT, value)
+        """
+        Sets the connection and read timeout
+        Note: value can be a tupple to have different timeouts for connection and reading (connTimout, readTimeout)
 
-    def connection_timeout(self, value):
-        return self.curl_option(pycurl.CONNECTTIMEOUT, value)
+        :param value - connection/read timout
+        """
+        self.options["timeout"] = value
+        return self
 
     def verbose(self):
+        """
+        Enables the verbose mode
+        """
+        HTTPConnection.debuglevel = 1
         self._verbose = True
-        return self.curl_option(pycurl.VERBOSE, True)
+        return self
 
     def fail_on_error(self):
-        return self.curl_option(pycurl.FAILONERROR, True)
+        self._fail_on_error = True
+        return self
 
     def header(self, key, value):
+        """
+        Adds a header to session headers used by the request
+
+        :param key - header key
+        :param value - header value
+        """
         if value:
-            self.headers[key] = value
+            header = {}
+            header[key] = value
+            self.headers.update(header)
         return self
 
     def accept(self, value):
-        return self.header('Accept', value)
+        self.headers.update({"Accept": value})
+        return self
 
     def content_type(self, value):
         return self.header('Content-Type', value)
@@ -159,15 +190,21 @@ class AgateRequest:
         return self.accept('application/json')
 
     def content_type_json(self):
-        return self.content_type('application/json')
+        self.content_type('application/json')
+        return self
 
     def method(self, method):
+        """
+        Sets a HTTP method
+
+        :param method - any of ['GET', 'DELETE', 'PUT', 'POST', 'OPTIONS']
+        """
         if not method:
-            self.method = 'GET'
-        elif method in ['GET', 'DELETE', 'PUT', 'POST', 'OPTIONS']:
+            self.method = "GET"
+        elif method in ["GET", "DELETE", "PUT", "POST", "OPTIONS"]:
             self.method = method
         else:
-            raise Exception('Not a valid method: ' + method)
+            raise ValueError("Not a valid method: " + method)
         return self
 
     def get(self):
@@ -186,68 +223,87 @@ class AgateRequest:
         return self.method('OPTIONS')
 
     def __build_request(self):
-        curl = pycurl.Curl()
-        # curl options
-        for o in self.client.curl_options:
-            curl.setopt(o, self.client.curl_options[o])
-        for o in self.curl_options:
-            curl.setopt(o, self.curl_options[o])
-            # headers
-        hlist = []
-        for h in self.client.headers:
-            hlist.append(h + ": " + self.client.headers[h])
-        for h in self.headers:
-            hlist.append(h + ": " + self.headers[h])
-        curl.setopt(pycurl.HTTPHEADER, hlist)
-        if self.method:
-            curl.setopt(pycurl.CUSTOMREQUEST, self.method)
+        """
+        Builder method creating a Request object to be sent by the client session object
+        """
+        request = Request()
+        request.method = self.method if self.method else "GET"
+
+        for option in self.options:
+            setattr(request, option, self.options[option])
+
+        # Combine the client and the request headers
+        request.headers = {}
+        request.headers.update(self.client.session.headers)
+        request.headers.update(self.headers)
+
         if self.resource:
-            curl.setopt(pycurl.URL, self.client.base_url + '/ws' + self.resource)
+            path = self.resource
+            request.url = self.client.base_url + "/ws" + path
+
+            if self.params:
+                request.params = self.params
         else:
-            raise Exception('Resource is missing')
-        return curl
+            raise ValueError("Resource is missing")
+
+        if self.files is not None:
+            request.files = self.files
+
+        if self.data is not None:
+            request.data = self.data
+
+        return request
+
 
     def resource(self, ws):
         self.resource = ws
         return self
 
+    def form(self, parameters):
+        """
+        Stores the request's body as a form
+        Note: no need to transform parameters in key=value pairs
+
+        :param parametes - parameters as a dict value
+        """
+        return self.content(parameters)
+
     def content(self, content):
+        """
+        Stores the request body
+
+        :param content - request body
+        """
         if self._verbose:
-            print('* Content:')
+            print("* Content:")
             print(content)
-        encodedContent = content.encode('utf-8')
-        self.curl_option(pycurl.POST, 1)
-        self.curl_option(pycurl.POSTFIELDSIZE, len(encodedContent))
-        self.curl_option(pycurl.POSTFIELDS, encodedContent)
+
+        self.data = content
         return self
 
-    def content_file(self, filename):
-        if self._verbose:
-            print('* File Content:')
-            print('[file=' + filename + ', size=' + str(os.path.getsize(filename)) + ']')
-        self.curl_option(pycurl.POST, 1)
-        self.curl_option(pycurl.POSTFIELDSIZE, os.path.getsize(filename))
-        reader = open(filename, 'rb')
-        self.curl_option(pycurl.READFUNCTION, reader.read)
-        return self
 
     def content_upload(self, filename):
+        """
+        Sets the file associate with the upload
+
+        Note: Requests library takes care of mutlti-part setting in the header
+        """
         if self._verbose:
-            print('* File Content:')
-            print('[file=' + filename + ', size=' + str(os.path.getsize(filename)) + ']')
-            # self.curl_option(pycurl.POST,1)
-        self.curl_option(pycurl.HTTPPOST, [("file1", (pycurl.FORM_FILE, filename))])
+            print("* File Content:")
+            print("[file=" + filename + ", size=" + str(os.path.getsize(filename)) + "]")
+        with open(filename, "rb") as file:
+            self.files = {"file": (filename, file.read())}
         return self
 
     def send(self):
-        curl = self.__build_request()
-        hbuf = HeaderStorage()
-        cbuf = Storage()
-        curl.setopt(curl.WRITEFUNCTION, cbuf.store)
-        curl.setopt(curl.HEADERFUNCTION, hbuf.store)
-        curl.perform()
-        response = AgateResponse(curl.getinfo(pycurl.HTTP_CODE), hbuf.headers, cbuf.content)
-        curl.close()
+        """
+        Sends the request via client session object
+        """
+        request = self.__build_request()
+        response = AgateResponse(self.client.session.send(request.prepare()))
+
+        if self._fail_on_error and response.code >= 400:
+            raise HTTPError(response)
 
         return response
 
@@ -298,19 +354,60 @@ class AgateResponse:
     Response from Agate: code, headers and content
     """
 
-    def __init__(self, code, headers, content):
-        self.code = code
-        self.headers = headers
-        self.content = content
+    def __init__(self, response):
+        self.response = response
+
+    @property
+    def code(self):
+        return self.response.status_code
+
+    @property
+    def headers(self):
+        return self.response.headers
+
+    @property
+    def content(self):
+        return self.response.content
+
+    @property
+    def version(self):
+        return self.headers.get("X-Agate-Version", None)
+
+    @property
+    def version_info(self):
+        agateVersion = self.version
+        if agateVersion is not None:
+            info = {}
+            version_parts = self.version.split(".")
+            if len(version_parts) == 3:
+                info["major"], info["minor"], info["patch"] = version_parts
+                return info
+            else:
+                # Handle malformed version string
+                return None
+        return None
 
     def as_json(self):
-        return json.loads(self.content)
+        """
+        Returns response body as a JSON document
+        """
+        if self.response is None or self.response.content is None:
+            return None
+
+        try:
+            return self.response.json()
+        except Exception as e:
+            if type(self.response.content) == str:
+                return self.response.content
+            else:
+                # FIXME silently fail
+                return None
 
     def pretty_json(self):
+        """
+        Beatifies the JSON response
+        """
         return json.dumps(self.as_json(), sort_keys=True, indent=2)
-
-    def __str__(self):
-        return self.content
 
 
 class UriBuilder:
@@ -357,3 +454,25 @@ class UriBuilder:
 
     def build(self):
         return self.__str__()
+
+class HTTPError(Exception):
+    """
+    HTTP related error class
+    """
+
+    def __init__(self, response: AgateResponse, message: str = None):
+        # Call the base class constructor with the parameters it needs
+        super().__init__(message if message else "HTTP Error: %s" % response.code)
+        self.code = response.code
+        http_status = [x for x in list(HTTPStatus) if x.value == response.code][0]
+        self.message = message if message else "%s: %s" % (http_status.phrase, http_status.description)
+        self.error = response.as_json() if response.content else {"code": response.code, "status": self.message}
+        # case the reported error is not a dict
+        if type(self.error) != dict:
+            self.error = {"code": response.code, "status": self.error}
+
+    def is_client_error(self) -> bool:
+        return self.code >= 400 and self.code < 500
+
+    def is_server_error(self) -> bool:
+        return self.code >= 500
