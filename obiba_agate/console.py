@@ -2,6 +2,7 @@
 # Agate commands main entry point
 #
 import argparse
+import getpass
 import sys
 
 import obiba_agate.rest as rest
@@ -10,7 +11,7 @@ import obiba_agate.auth_management.group as group
 import obiba_agate.auth_management.user as user
 
 def prompt_password():
-    return input('Enter password:')
+    return getpass.getpass(prompt='Enter password:')
 
 def add_agate_arguments(parser):
     """
@@ -72,7 +73,11 @@ def run():
     # Execute selected command
     args = parser.parse_args()
 
-    if not args.password or len(args.password) == 0:
+    try:
+        if not args.password or len(args.password) == 0:
+            args.password = prompt_password()
+            pass
+    except AttributeError:
         args.password = prompt_password()
 
     if hasattr(args, 'func'):
