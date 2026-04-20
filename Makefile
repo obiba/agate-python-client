@@ -1,14 +1,28 @@
 install:
-	poetry install
+	uv sync --all-extras
 
 test:
-	poetry run pytest
+	uv run --all-extras pytest
+
+lint:
+	uv run ruff check .
+
+fix:
+	uv run ruff check . --fix
+
+format:
+	uv run ruff format .
+
+check: format fix
 
 build:
-	poetry build
+	uv build
 
 clean:
 	rm -rf dist
 
-local-install:
-	pip install ./dist/obiba_agate-*.tar.gz 
+local-install: clean build
+	pip install ./dist/obiba_agate-*.tar.gz
+
+local-install-force: clean build
+	pip install ./dist/obiba_agate-*.tar.gz --break-system-packages
